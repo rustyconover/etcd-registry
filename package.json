@@ -15,10 +15,10 @@
   },
   "dependencies": {
     "chalk": "^1.0.0",
-    "etcdjs": "^2.2.0",
     "freeport": "^1.0.2",
     "lru-cache": "^2.5.0",
     "network-address": "0.0.4",
+    "node-etcd": "^5.0.3",
     "optimist": "^0.6.1",
     "pretty-tree": "^0.1.2"
   },

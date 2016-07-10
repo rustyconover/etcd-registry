@@ -18,12 +18,13 @@ describe('basic operations', () => {
          `http://${etcdConnectionString}?refresh=abc`,
          'https://discovery.etcd.io/foobar',
          { url: etcdConnectionString },
-        ], (connection) => {
-    it(`should able be able to use ${connection}`, (done) => {
-      const s = new Registry(connection);
-      s.leave(done);
-    });
-  });
+        ],
+        (connection) => {
+          it(`should able be able to use ${connection}`, (done) => {
+            const s = new Registry(connection);
+            s.leave(done);
+          });
+        });
 
   it('should be able to renew service registrations', (done) => {
     const reg = new Registry(etcdConnectionString);

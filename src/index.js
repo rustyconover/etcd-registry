@@ -2,7 +2,7 @@ import LRU from 'lru-cache';
 import crypto from 'crypto';
 import address from 'network-address';
 import querystring from 'querystring';
-import etcdjs from 'etcdjs';
+import Etcd from 'node-etcd';
 import _ from 'lodash';
 import assert from 'assert';
 require('source-map-support').install();
@@ -60,8 +60,7 @@ const parseConnectionString = (url) => {
 export default class Registry {
   constructor(opts) {
     opts = parseConnectionString(opts);
-
-    this.store = etcdjs(opts);
+    this.store = new Etcd(opts.hosts);
     this.cache = new LRU(opts.cache || 100);
     this.destroyed = false;
     this.services = [];
@@ -164,6 +163,11 @@ export default class Registry {
       { recursive: true },
       (err, result) => {
         if (err) {
+          if (err.errorCode && err.errorCode === 100) {
+            // Not found
+            cb(undefined, []);
+            return;
+          }
           cb(err);
           return;
         }
@@ -221,7 +225,6 @@ export default class Registry {
   destroy(cb) {
     this.destroyed = true;
     this.leave(this.services, () => {
-      this.store.destroy();
       if (cb) {
         cb();
         return;
