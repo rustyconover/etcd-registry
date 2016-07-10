@@ -45,10 +45,10 @@ describe('basic operations', () => {
         ttl: 2,
       },
       (err) => {
-        expect(err, 'join error').to.be.undefined;
+        expect(err, 'join error').to.not.be.ok;
         setTimeout(() => {
           reg.lookup(serviceName, (lookupErr, s) => {
-            expect(lookupErr, 'lookup error').to.be.undefined;
+            expect(lookupErr, 'lookup error').to.not.be.ok;
             expect(s, 'lookup result').to.be.defined;
             expect(s, 'lookup result').to.deep.equal({
               name: serviceName,
@@ -79,7 +79,7 @@ describe('basic operations', () => {
 
     setTimeout(() => {
       reg.lookup(serviceName, (lookupErr, s) => {
-        expect(lookupErr, 'lookup error').to.be.undefined;
+        expect(lookupErr, 'lookup error').to.not.be.ok;
         expect(s, 'lookup result').to.be.defined;
         expect(s, 'lookup result').to.deep.equal({
           name: serviceName,
@@ -107,10 +107,10 @@ describe('basic operations', () => {
         ttl: 2,
       },
       (err) => {
-        expect(err, 'join error').to.be.undefined;
+        expect(err, 'join error').to.not.be.ok;
         setTimeout(() => {
           reg.lookup(serviceName, (lookupErr, s) => {
-            expect(lookupErr, 'lookup error').to.be.undefined;
+            expect(lookupErr, 'lookup error').to.not.be.ok;
             expect(s, 'lookup result').to.be.defined;
             expect(s, 'lookup result').to.deep.equal({
               name: serviceName,
@@ -124,8 +124,8 @@ describe('basic operations', () => {
               reg.leave(serviceName);
               setTimeout(() => {
                 reg.lookup(serviceName, (lastLookupErr, emptyResult) => {
-                  expect(lastLookupErr, 'last lookup error').to.be.undefined;
-                  expect(emptyResult, 'last lookup result').to.be.undefined;
+                  expect(lastLookupErr, 'last lookup error').to.not.be.ok;
+                  expect(emptyResult, 'last lookup result').to.not.be.ok;
                   reg.leave(() => done());
                 });
               }, 3000);
@@ -147,10 +147,10 @@ describe('basic operations', () => {
         },
       },
       (err) => {
-        expect(err, 'join error').to.be.undefined;
+        expect(err, 'join error').to.not.be.ok;
         setTimeout(() => {
           reg.lookup(serviceName, (lookupErr, s) => {
-            expect(lookupErr, 'lookup error').to.be.undefined;
+            expect(lookupErr, 'lookup error').to.not.be.ok;
             expect(s, 'lookup result').to.be.defined;
             expect(s, 'lookup result').to.deep.equal({
               name: serviceName,
@@ -174,10 +174,10 @@ describe('basic operations', () => {
         service: 1000,
       },
       (err) => {
-        expect(err, 'join error').to.be.undefined;
+        expect(err, 'join error').to.not.be.ok;
         setTimeout(() => {
           reg.lookup(serviceName, (lookupErr, s) => {
-            expect(lookupErr, 'lookup error').to.be.undefined;
+            expect(lookupErr, 'lookup error').to.not.be.ok;
             expect(s, 'lookup result').to.be.defined;
             expect(s, 'lookup result').to.deep.equal({
               name: serviceName,
@@ -200,10 +200,10 @@ describe('basic operations', () => {
         name: serviceName,
       },
       (err) => {
-        expect(err, 'join error').to.be.undefined;
+        expect(err, 'join error').to.not.be.ok;
         setTimeout(() => {
           reg.lookup(serviceName, (lookupErr, s) => {
-            expect(lookupErr, 'lookup error').to.be.undefined;
+            expect(lookupErr, 'lookup error').to.not.be.ok;
             expect(s, 'lookup result').to.be.defined;
             expect(s, 'lookup result').to.deep.equal({
               name: serviceName,
@@ -222,12 +222,12 @@ describe('basic operations', () => {
     const reg = new Registry(etcdConnectionString);
     const serviceName = generateServiceName();
     reg.join({ name: serviceName, service: { port: 1000 } }, (err) => {
-      expect(err, 'error on join').to.be.undefined;
+      expect(err, 'error on join').to.not.be.ok;
       reg.join({ name: serviceName, service: { port: 1001 } }, (secondErr) => {
-        expect(secondErr, 'second error on join').to.be.undefined;
+        expect(secondErr, 'second error on join').to.not.be.ok;
         setTimeout(() => {
           reg.list(serviceName, (listErr, list) => {
-            expect(listErr, 'error on list').to.be.undefined;
+            expect(listErr, 'error on list').to.not.be.ok;
             expect(list.length, 'number of services').to.equal(2);
             reg.leave(done);
           });
@@ -240,7 +240,7 @@ describe('basic operations', () => {
     const reg = new Registry(etcdConnectionString);
     const serviceName = generateServiceName();
     reg.list(serviceName, (listErr, list) => {
-      expect(listErr, 'error on list').to.be.undefined;
+      expect(listErr, 'error on list').to.not.be.ok;
       expect(list.length, 'number of services').to.equal(0);
       reg.leave(done);
     });
@@ -250,12 +250,12 @@ describe('basic operations', () => {
     const reg = new Registry(etcdConnectionString);
     const serviceName = generateServiceName();
     reg.join({ name: serviceName, service: { port: 1000 } }, (err) => {
-      expect(err).to.be.undefined;
+      expect(err).to.not.be.ok;
       reg.leave(serviceName, (leaveErr) => {
-        expect(leaveErr).to.be.undefined;
+        expect(leaveErr).to.not.be.ok;
         setTimeout(() => {
           reg.lookup(serviceName, (lookupErr, s) => {
-            expect(lookupErr).to.be.undefined;
+            expect(lookupErr).to.not.be.ok;
             expect(s).to.be.undefined;
             reg.leave(done);
           });
@@ -271,14 +271,14 @@ describe('basic operations', () => {
     reg.join({ name: serviceName, service: { port: 1000 } }, (err) => {
       setTimeout(() => {
         expect(reg.monitorContents(serviceName).length).to.equal(1);
-        expect(err).to.be.undefined;
+        expect(err).to.not.be.ok;
         reg.leave(serviceName, (leaveErr) => {
-          expect(leaveErr).to.be.undefined;
+          expect(leaveErr).to.not.be.ok;
           setTimeout(() => {
             expect(reg.monitorContents(serviceName).length).to.equal(0);
             reg.lookup(serviceName, (lookupErr, s) => {
               expect(reg.monitorContents(serviceName).length).to.equal(0);
-              expect(lookupErr).to.be.undefined;
+              expect(lookupErr).to.not.be.ok;
               expect(s).to.be.undefined;
               reg.leave(done);
             });
@@ -295,15 +295,15 @@ describe('basic operations', () => {
     reg.join({ name: serviceName, service: { port: 1000 }, ttl: 1 }, (err) => {
       setTimeout(() => {
         expect(reg.monitorContents(serviceName).length).to.equal(1);
-        expect(err).to.be.undefined;
+        expect(err).to.not.be.ok;
         reg.leave(serviceName, (leaveErr) => {
-          expect(leaveErr).to.be.undefined;
+          expect(leaveErr).to.not.be.ok;
           setTimeout(() => {
             expect(reg.monitorContents(serviceName).length).to.equal(0);
             setTimeout(() => {
               reg.lookup(serviceName, (lookupErr, s) => {
                 reg.monitorStop(serviceName);
-                expect(lookupErr).to.be.undefined;
+                expect(lookupErr).to.not.be.ok;
                 expect(s).to.be.undefined;
                 reg.leave(done);
               });
@@ -329,15 +329,15 @@ describe('basic operations', () => {
                  ttl: 10,
                }, cb),
                (err) => {
-                 expect(err).to.be.undefined;
+                 expect(err).to.not.be.ok;
                  setTimeout(() => {
                    expect(reg.monitorContents(serviceName).length).to.equal(instances.length);
                    reg.leave(serviceName, (leaveErr) => {
-                     expect(leaveErr).to.be.undefined;
+                     expect(leaveErr).to.not.be.ok;
                      setTimeout(() => {
                        reg.lookup(serviceName, (lookupErr, s) => {
                          expect(reg.monitorContents(serviceName).length).to.equal(0);
-                         expect(lookupErr).to.be.undefined;
+                         expect(lookupErr).to.not.be.ok;
                          expect(s).to.be.undefined;
                          done();
                        });
@@ -359,7 +359,7 @@ describe('basic operations', () => {
                  ttl: 10,
                }, cb),
                (err) => {
-                 expect(err).to.be.undefined;
+                 expect(err).to.not.be.ok;
                  reg.monitorStart(serviceName);
                  setTimeout(() => {
                    expect(reg.monitorContents(serviceName).length).to.equal(instances.length);
@@ -372,11 +372,11 @@ describe('basic operations', () => {
                    setTimeout(() => {
                      expect(reg.monitorContents(serviceName).length).to.equal(instances.length + 1);
                      reg.leave(serviceName, (leaveErr) => {
-                       expect(leaveErr).to.be.undefined;
+                       expect(leaveErr).to.not.be.ok;
                        setTimeout(() => {
                          reg.lookup(serviceName, (lookupErr, s) => {
                            expect(reg.monitorContents(serviceName).length).to.equal(0);
-                           expect(lookupErr).to.be.undefined;
+                           expect(lookupErr).to.not.be.ok;
                            expect(s).to.be.undefined;
                            done();
                          });
