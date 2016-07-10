@@ -12,8 +12,7 @@ addons:
     - gcc-4.8
     - g++-4.8
     - clang
-    - etcd
 before_install:
-  - sudo service etcd stop
+  - ./build_etcd.sh v2.2.0
   - sudo rm -rf /var/lib/etcd/*
-  - sudo service etcd start
+  - ./etcd/bin/etcd &
