@@ -1,0 +1,19 @@
+language: node_js
+node_js:
+  - "6"
+  - "6.1"
+env:
+  - CXX="g++-4.8" CC="gcc-4.8"
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-4.8
+    - g++-4.8
+    - clang
+    - etcd
+before_install:
+  - sudo service etcd stop
+  - sudo rm -rf /var/lib/etcd/*
+  - sudo service etcd start
