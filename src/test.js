@@ -5,9 +5,15 @@ import { expect } from 'chai';
 import randomstring from 'randomstring';
 import _ from 'lodash';
 import address from 'network-address';
+import async from 'async';
 require('source-map-support').install();
 
 const etcdConnectionString = '127.0.0.1:2379';
+
+const serviceNamePrefix = randomstring.generate();
+let counter = 1;
+
+const generateServiceName = () => `${serviceNamePrefix}-${counter++}`;
 
 describe('basic operations', () => {
   _.map([etcdConnectionString,
@@ -28,7 +34,7 @@ describe('basic operations', () => {
 
   it('should be able to renew service registrations', (done) => {
     const reg = new Registry(etcdConnectionString);
-    const serviceName = randomstring.generate();
+    const serviceName = generateServiceName();
     reg.join(
       {
         name: serviceName,
@@ -57,9 +63,10 @@ describe('basic operations', () => {
       });
   });
 
+
   it('should be able to do registrations without callbacks', (done) => {
     const reg = new Registry(etcdConnectionString);
-    const serviceName = randomstring.generate();
+    const serviceName = generateServiceName();
     reg.join(
       {
         name: serviceName,
@@ -89,7 +96,7 @@ describe('basic operations', () => {
 
   it('expired registrations should not be returned', (done) => {
     const reg = new Registry(etcdConnectionString);
-    const serviceName = randomstring.generate();
+    const serviceName = generateServiceName();
     reg.join(
       {
         name: serviceName,
@@ -128,12 +135,9 @@ describe('basic operations', () => {
       });
   });
 
-  it('should be able to cache services');
-  it('the cache should expire');
-
   it('should able to add a service', (done) => {
     const reg = new Registry(etcdConnectionString);
-    const serviceName = randomstring.generate();
+    const serviceName = generateServiceName();
     reg.join(
       {
         name: serviceName,
@@ -163,7 +167,7 @@ describe('basic operations', () => {
 
   it('should able to add a service using only the port number', (done) => {
     const reg = new Registry(etcdConnectionString);
-    const serviceName = randomstring.generate();
+    const serviceName = generateServiceName();
     reg.join(
       {
         name: serviceName,
@@ -190,7 +194,7 @@ describe('basic operations', () => {
 
   it('should able to add a service without a port number', (done) => {
     const reg = new Registry(etcdConnectionString);
-    const serviceName = randomstring.generate();
+    const serviceName = generateServiceName();
     reg.join(
       {
         name: serviceName,
@@ -216,7 +220,7 @@ describe('basic operations', () => {
 
   it('should be able to list services', (done) => {
     const reg = new Registry(etcdConnectionString);
-    const serviceName = randomstring.generate();
+    const serviceName = generateServiceName();
     reg.join({ name: serviceName, service: { port: 1000 } }, (err) => {
       expect(err, 'error on join').to.be.undefined;
       reg.join({ name: serviceName, service: { port: 1001 } }, (secondErr) => {
@@ -234,7 +238,7 @@ describe('basic operations', () => {
 
   it('should be able to list unknown services', (done) => {
     const reg = new Registry(etcdConnectionString);
-    const serviceName = randomstring.generate();
+    const serviceName = generateServiceName();
     reg.list(serviceName, (listErr, list) => {
       expect(listErr, 'error on list').to.be.undefined;
       expect(list.length, 'number of services').to.equal(0);
@@ -244,7 +248,7 @@ describe('basic operations', () => {
 
   it('should be able to remove services', (done) => {
     const reg = new Registry(etcdConnectionString);
-    const serviceName = randomstring.generate();
+    const serviceName = generateServiceName();
     reg.join({ name: serviceName, service: { port: 1000 } }, (err) => {
       expect(err).to.be.undefined;
       reg.leave(serviceName, (leaveErr) => {
@@ -258,5 +262,128 @@ describe('basic operations', () => {
         });
       }, 100);
     });
+  });
+
+  it('should be able to monitor a single service instance', (done) => {
+    const reg = new Registry(etcdConnectionString);
+    const serviceName = generateServiceName();
+    reg.monitorStart(serviceName);
+    reg.join({ name: serviceName, service: { port: 1000 } }, (err) => {
+      setTimeout(() => {
+        expect(reg.monitorContents(serviceName).length).to.equal(1);
+        expect(err).to.be.undefined;
+        reg.leave(serviceName, (leaveErr) => {
+          expect(leaveErr).to.be.undefined;
+          setTimeout(() => {
+            expect(reg.monitorContents(serviceName).length).to.equal(0);
+            reg.lookup(serviceName, (lookupErr, s) => {
+              expect(reg.monitorContents(serviceName).length).to.equal(0);
+              expect(lookupErr).to.be.undefined;
+              expect(s).to.be.undefined;
+              reg.leave(done);
+            });
+          }, 1000);
+        });
+      }, 1000);
+    });
+  });
+
+  it('should be able to monitor a single service instance over renewals', (done) => {
+    const reg = new Registry(etcdConnectionString);
+    const serviceName = generateServiceName();
+    reg.monitorStart(serviceName);
+    reg.join({ name: serviceName, service: { port: 1000 }, ttl: 1 }, (err) => {
+      setTimeout(() => {
+        expect(reg.monitorContents(serviceName).length).to.equal(1);
+        expect(err).to.be.undefined;
+        reg.leave(serviceName, (leaveErr) => {
+          expect(leaveErr).to.be.undefined;
+          setTimeout(() => {
+            expect(reg.monitorContents(serviceName).length).to.equal(0);
+            setTimeout(() => {
+              reg.lookup(serviceName, (lookupErr, s) => {
+                reg.monitorStop(serviceName);
+                expect(lookupErr).to.be.undefined;
+                expect(s).to.be.undefined;
+                reg.leave(done);
+              });
+            }, 500);
+          }, 500);
+        });
+      }, 3000);
+    });
+  });
+
+
+  it('should be able to monitor a multiple service instances', (done) => {
+    const reg = new Registry(etcdConnectionString);
+    const serviceName = generateServiceName();
+    reg.monitorStart(serviceName);
+
+    const instances = _.map(_.range(20), (i) => i + 2000);
+
+    async.each(instances,
+               (i, cb) => reg.join({
+                 name: serviceName,
+                 service: { port: i },
+                 ttl: 10,
+               }, cb),
+               (err) => {
+                 expect(err).to.be.undefined;
+                 setTimeout(() => {
+                   expect(reg.monitorContents(serviceName).length).to.equal(instances.length);
+                   reg.leave(serviceName, (leaveErr) => {
+                     expect(leaveErr).to.be.undefined;
+                     setTimeout(() => {
+                       reg.lookup(serviceName, (lookupErr, s) => {
+                         expect(reg.monitorContents(serviceName).length).to.equal(0);
+                         expect(lookupErr).to.be.undefined;
+                         expect(s).to.be.undefined;
+                         done();
+                       });
+                     }, 1500);
+                   }, 1500);
+                 }, 3000);
+               });
+  });
+
+  it('should be able to monitor existing multiple service instances', (done) => {
+    const reg = new Registry(etcdConnectionString);
+    const serviceName = generateServiceName();
+    const instances = _.map(_.range(20), (i) => i + 2000);
+
+    async.each(instances,
+               (i, cb) => reg.join({
+                 name: serviceName,
+                 service: { port: i },
+                 ttl: 10,
+               }, cb),
+               (err) => {
+                 expect(err).to.be.undefined;
+                 reg.monitorStart(serviceName);
+                 setTimeout(() => {
+                   expect(reg.monitorContents(serviceName).length).to.equal(instances.length);
+                   reg.join({
+                     name: serviceName,
+                     service: { port: 3000 },
+                     ttl: 10,
+                   });
+
+                   setTimeout(() => {
+                     expect(reg.monitorContents(serviceName).length).to.equal(instances.length + 1);
+                     reg.leave(serviceName, (leaveErr) => {
+                       expect(leaveErr).to.be.undefined;
+                       setTimeout(() => {
+                         reg.lookup(serviceName, (lookupErr, s) => {
+                           expect(reg.monitorContents(serviceName).length).to.equal(0);
+                           expect(lookupErr).to.be.undefined;
+                           expect(s).to.be.undefined;
+                           done();
+                         });
+                       }, 1000);
+                     }, 1500);
+                   }, 1500);
+                 }, 3000);
+               });
   });
 });

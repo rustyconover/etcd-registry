@@ -12,6 +12,16 @@ const noop = () => {};
 
 const sha1 = (val) => crypto.createHash('sha1').update(val).digest('hex');
 
+const safeJSONParse = (c) => {
+  let r;
+  try {
+    r = JSON.parse(c);
+  } catch (e) {
+    r = null;
+  }
+  return r;
+};
+
 const parseSetting = (val) => {
   if (!val) {
     return undefined;
@@ -66,6 +76,8 @@ export default class Registry {
     this.cache = new LRU(opts.cache || 100);
     this.destroyed = false;
     this.services = [];
+    this.monitoredServices = {};
+    this.activeServiceMonitors = {};
     this.ns = (opts.namespace || '').replace(/^\//, '').replace(/([^\/])$/, '$1/');
   }
 
@@ -150,6 +162,77 @@ export default class Registry {
     this.list(name, (err, list) => cb(err, _.sample(list)));
   }
 
+  monitorContents(name) {
+    if (_.isNil(this.activeServiceMonitors[name])) {
+      throw new Error(`No active service monitor for ${name}`);
+    }
+
+    return _.values(this.monitoredServices[name]);
+  }
+
+  monitorStop(name) {
+    const m = this.activeServiceMonitors[name];
+    if (!_.isNil(m)) {
+      m.stop();
+      delete this.activeServiceMonitors[name];
+    }
+  }
+
+  monitorStart(name) {
+    if (this.activeServiceMonitors[name]) {
+      return;
+    }
+    // Fake this.
+    let shouldCancel = false;
+    this.activeServiceMonitors[name] = {
+      stop: () => {
+        shouldCancel = true;
+      },
+    };
+    this.monitoredServices[name] = {};
+
+    const pullFullList = () => this.list(name, (err, results, rawResult) => {
+      // Already got stopped before we got started.
+      if (shouldCancel) {
+        return;
+      }
+      this.monitoredServices[name] = _.groupBy(results, 'url');
+
+      let startIndex;
+      if (rawResult.error && rawResult.error.index) {
+        startIndex = rawResult.error.index;
+      } else {
+        assert(1 !== 0);
+      }
+      const w = this.store.watcher(this.prefixKey(name),
+                                   startIndex,
+                                   { recursive: true });
+      this.activeServiceMonitors[name] = w;
+
+      w.on('change', (record) => {
+        if (record.action === 'set') {
+          const c = safeJSONParse(record.node.value);
+          if (!_.isNil(c.url)) {
+            this.monitoredServices[name][c.url] = c;
+          }
+        } else if (record.action === 'delete') {
+          const c = safeJSONParse(record.prevNode.value);
+          if (!_.isNil(c.url)) {
+            delete this.monitoredServices[name][c.url];
+          }
+        } else if (record.action === 'reconnect') {
+          w.stop();
+          pullFullList();
+        } else if (record.action === 'resync') {
+          w.stop();
+          pullFullList();
+        }
+      });
+    });
+
+    pullFullList();
+  }
+
   list(name, cb) {
     if (typeof name === 'function') {
       cb = name;
@@ -167,7 +250,7 @@ export default class Registry {
         if (err) {
           if (err.errorCode && err.errorCode === 100) {
             // Not found
-            cb(undefined, []);
+            cb(undefined, [], err);
             return;
           }
           cb(err);
@@ -175,19 +258,13 @@ export default class Registry {
         }
 
         if (!result || !result.node || !result.node.nodes) {
-          cb(undefined, []);
+          cb(undefined, [], result);
           return;
         }
 
-        const list = _.map(result.node.nodes, (n) => {
-          try {
-            return JSON.parse(n.value);
-          } catch (e) {
-            return null;
-          }
-        });
-
-        cb(undefined, list);
+        cb(undefined,
+           _.filter(_.map(result.node.nodes, ({ value }) => safeJSONParse(value))),
+           result);
       });
   }
 
@@ -207,7 +284,6 @@ export default class Registry {
       if (i > -1) {
         this.services.splice(next, 1);
       }
-
       this.store.del(next.key, loop);
     };
 
