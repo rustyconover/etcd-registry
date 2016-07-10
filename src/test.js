@@ -260,7 +260,7 @@ describe('basic operations', () => {
             reg.leave(done);
           });
         });
-      }, 100);
+      }, 2000);
     });
   });
 
@@ -307,8 +307,8 @@ describe('basic operations', () => {
                 expect(s).to.be.undefined;
                 reg.leave(done);
               });
-            }, 500);
-          }, 500);
+            }, 1500);
+          }, 1500);
         });
       }, 3000);
     });
