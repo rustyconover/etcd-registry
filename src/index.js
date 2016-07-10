@@ -31,27 +31,29 @@ const parseSetting = (val) => {
 const parseConnectionString = (url) => {
   const opts = {};
 
+  let hosts;
   if (!url || typeof url === 'object') {
     _.defaults(opts, url);
+    hosts = url.url || url.hosts;
   } else {
-    if (/^https:\/\/discovery.etcd.io\//.test(url)) {
-      opts.token = url;
+    hosts = url;
+    if (/^https:\/\/discovery.etcd.io\//.test(hosts)) {
+      opts.token = hosts;
     }
-
-
-    const parsed = url.match(/^([^:]+:\/\/)?([^\/]+)(?:\/([^\?]+))?(?:\?(.+))?$/);
-    if (!parsed) {
-      throw new Error('Invalid connection string');
-    }
-
-    const protocol = parsed[1] || 'http://';
-    const qs = querystring.parse(url.split('?')[1]);
-
-    opts.namespace = parsed[3] || '';
-    opts.refresh = !!parseSetting(qs.refresh);
-    opts.cache = parseSetting(qs.cache);
-    opts.hosts = parsed[2].split(/,\s*/).map((urlPart) => protocol + urlPart);
   }
+
+  const parsed = hosts.match(/^([^:]+:\/\/)?([^\/]+)(?:\/([^\?]+))?(?:\?(.+))?$/);
+  if (!parsed) {
+    throw new Error('Invalid connection string');
+  }
+
+  const protocol = parsed[1] || 'http://';
+  const qs = querystring.parse(hosts.split('?')[1]);
+
+  opts.namespace = parsed[3] || '';
+  opts.refresh = !!parseSetting(qs.refresh);
+  opts.cache = parseSetting(qs.cache);
+  opts.hosts = parsed[2].split(/,\s*/).map((hostsPart) => protocol + hostsPart);
 
   return opts;
 };
