@@ -16,3 +16,5 @@ before_install:
   - ./build_etcd.sh v2.2.0
   - sudo rm -rf /var/lib/etcd/*
   - ./etcd/bin/etcd &
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

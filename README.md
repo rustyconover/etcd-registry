@@ -1,5 +1,16 @@
 # etcd-registry
 
+[![Build Status](https://travis-ci.org/rustyconover/etcd-registry.svg?branch=master)](https://travis-ci.org/rustyconover/etcd-registry)
+[![Dependency Status](https://img.shields.io/david/rustyconover/etcd-registry.svg?style=flat-square)](https://david-dm.org/rustyconover/etcd-registry)
+
+This is a fork of `etcd-registry` to accomplish a few goals:
+
+* Use etcd-node
+* Use ES6
+* Allow service entries to be monitored for changes
+* Add more robust tests
+* Add linting and code coverage tests
+
 Service registry for Node.js on top of [etcd](https://github.com/coreos/etcd)
 
 	npm install etcd-registry
