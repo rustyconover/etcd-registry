@@ -3,11 +3,15 @@
   "version": "2.1.1",
   "description": "Service registry for Node.js on top of etcd",
   "repository": "git://github.com/mafintosh/etcd-registry.git",
+  "main": "./lib/index.js",
   "scripts": {
-    "test": "tap test.js"
+    "build": "make",
+    "test": "npm run build && mocha -t 10000 -b lib/test.js",
+    "test-coverage": "npm run build && babel-istanbul cover _mocha -- -t 10000 src/test.js",
+    "test-coverage2": "npm run build && istanbul cover _mocha -- -t 10000 lib/test.js"
   },
   "bin": {
-    "etcd-registry": "./bin.js"
+    "etcd-registry": "./lib/bin.js"
   },
   "dependencies": {
     "chalk": "^1.0.0",
@@ -19,6 +23,17 @@
     "pretty-tree": "^0.1.2"
   },
   "devDependencies": {
-    "tap": "~0.4.8"
+    "babel-istanbul": "^0.11.0",
+    "babel-preset-airbnb": "^2.0.0",
+    "babel-preset-node6": "^11.0.0",
+    "chai": "^3.5.0",
+    "eslint": "^2.13.1",
+    "eslint-config-airbnb": "^9.0.1",
+    "eslint-plugin-import": "^1.10.2",
+    "eslint-plugin-jsx-a11y": "^1.5.5",
+    "eslint-plugin-react": "^5.2.2",
+    "istanbul": "^0.4.4",
+    "mocha": "^2.5.3",
+    "randomstring": "^1.1.5"
   }
 }
