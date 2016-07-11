@@ -72,10 +72,11 @@ const parseConnectionString = (url) => {
 export default class Registry {
   constructor(opts) {
     opts = parseConnectionString(opts);
-    this.store = new Etcd(opts.hosts);
+    this.store = new Etcd(opts.hosts, opts);
     this.cache = new LRU(opts.cache || 100);
     this.destroyed = false;
     this.services = [];
+    this.maxRetries = opts.maxRetries;
     this.monitoredServices = {};
     this.activeServiceMonitors = {};
     this.ns = (opts.namespace || '').replace(/^\//, '').replace(/([^\/])$/, '$1/');
@@ -124,7 +125,11 @@ export default class Registry {
                     timeout: null,
                   };
 
-    const update = (callback) => this.store.set(key, value, { ttl }, callback);
+    const update = (callback) => this.store.set(key,
+                                                value,
+                                                { ttl,
+                                                  maxRetries: this.maxRetries,
+                                                }, callback);
     const loop = () => update((err) => {
       if (entry.destroyed) {
         return;
@@ -245,7 +250,9 @@ export default class Registry {
 
     this.store.get(
       this.prefixKey(name || ''),
-      { recursive: true },
+      { recursive: true,
+        maxRetries: this.maxRetries,
+      },
       (err, result) => {
         if (err) {
           if (err.errorCode && err.errorCode === 100) {
@@ -284,7 +291,10 @@ export default class Registry {
       if (i > -1) {
         this.services.splice(next, 1);
       }
-      this.store.del(next.key, loop);
+      this.store.del(next.key, {
+        maxRetries: this.maxRetries,
+      },
+                     loop);
     };
 
     loop();

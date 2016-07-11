@@ -32,6 +32,32 @@ describe('basic operations', () => {
           });
         });
 
+  it('should be able to handle etcd that is down', (done) => {
+    const reg = new Registry({ url: 'http://127.0.0.1:1',
+                               maxRetries: 0,
+                             });
+    const serviceName = generateServiceName();
+    reg.join(
+      {
+        name: serviceName,
+        service: {
+          port: 1000,
+          hostname: '127.0.0.1',
+        },
+        ttl: 2,
+      },
+      (err) => {
+        expect(err, 'join error').to.be.defined;
+        setTimeout(() => {
+          reg.lookup(serviceName, (lookupErr) => {
+            expect(lookupErr, 'lookup error').to.be.defined;
+            reg.leave(() => done());
+          });
+        }, 1000);
+      });
+  });
+
+
   it('should be able to renew service registrations', (done) => {
     const reg = new Registry(etcdConnectionString);
     const serviceName = generateServiceName();
