@@ -215,7 +215,7 @@ export default class Registry {
           if (!_.isNil(c.url)) {
             this.monitoredServices[name][c.url] = c;
           }
-        } else if (record.action === 'delete') {
+        } else if (record.action === 'delete' || record.action === 'expire') {
           const c = safeJSONParse(record.prevNode.value);
           if (!_.isNil(c.url)) {
             delete this.monitoredServices[name][c.url];
