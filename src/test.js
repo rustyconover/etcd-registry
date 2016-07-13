@@ -89,6 +89,39 @@ describe('basic operations', () => {
       });
   });
 
+  it('should be persist additional service information', (done) => {
+    const reg = new Registry(etcdConnectionString);
+    const serviceName = generateServiceName();
+    reg.join(
+      {
+        name: serviceName,
+        service: {
+          port: 1000,
+          hostname: '127.0.0.1',
+          datacenter: 'test123',
+        },
+        ttl: 2,
+      },
+      (err) => {
+        expect(err, 'join error').to.not.be.ok;
+        setTimeout(() => {
+          reg.lookup(serviceName, (lookupErr, s) => {
+            expect(lookupErr, 'lookup error').to.not.be.ok;
+            expect(s, 'lookup result').to.be.defined;
+            expect(s, 'lookup result').to.deep.equal({
+              datacenter: 'test123',
+              name: serviceName,
+              port: 1000,
+              hostname: '127.0.0.1',
+              host: '127.0.0.1:1000',
+              url: 'http://127.0.0.1:1000',
+            });
+            reg.leave(() => done());
+          });
+        }, 3000);
+      });
+  });
+
 
   it('should be able to do registrations without callbacks', (done) => {
     const reg = new Registry(etcdConnectionString);
