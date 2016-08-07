@@ -1,12 +1,12 @@
 {
-  "name": "etcd-registry",
-  "version": "2.1.1",
+  "name": "@rustyconover/etcd-registry",
+  "version": "2.1.4",
   "description": "Service registry for Node.js on top of etcd",
-  "repository": "git://github.com/mafintosh/etcd-registry.git",
+  "repository": "git://github.com/rustyconover/etcd-registry.git",
   "main": "./lib/index.js",
   "scripts": {
     "build": "make",
-    "preinstall": "npm run build",
+    "prepublish": "npm run build",
     "test": "npm run build && mocha -t 20000 -b lib/test.js",
     "test-coverage": "npm run build && babel-istanbul cover _mocha -- -t 10000 src/test.js",
     "test-coverage2": "npm run build && istanbul cover _mocha -- -t 10000 lib/test.js"

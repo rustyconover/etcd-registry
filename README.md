@@ -55,6 +55,8 @@ Found the following service:
 ## Full api
 
 * `services = registry(connection-string)` Create a new registry client
+* `services = registry({ url: connection-url, maxRetries: 3, logger: loggerObject)`
+   Create a new registry client setting the maximum number of retries along with a Winston like logger object
 * `services.join({ name, service, ttl }, [cb])` Join the registry with a new service
 * `services.leave([name], [cb])` Leave the registry. Omit the name to remove local services
 * `services.lookup(name, cb)` Lookup a single service

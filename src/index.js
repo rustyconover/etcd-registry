@@ -76,10 +76,17 @@ export default class Registry {
     this.cache = new LRU(opts.cache || 100);
     this.destroyed = false;
     this.services = [];
+    this.logger = opts.logger;
     this.maxRetries = opts.maxRetries;
     this.monitoredServices = {};
     this.activeServiceMonitors = {};
     this.ns = (opts.namespace || '').replace(/^\//, '').replace(/([^\/])$/, '$1/');
+
+    if (!this.logger) {
+      this.logger = {
+        debug: () => {},
+      };
+    }
   }
 
   prefixKey(key) {
@@ -142,9 +149,10 @@ export default class Registry {
                                         () => {
                                           cb(err);
                                         });
-
+    this.logger.debug('Service join', { entry });
     this.services.push(entry);
     update((err) => {
+      this.logger.debug('Successfully, joined service', { entry });
       if (err) {
         onError(err);
         return;
@@ -164,6 +172,7 @@ export default class Registry {
       cb = name;
       name = null;
     }
+    this.logger.debug('Retrieving service entries', { name });
     this.list(name, (err, list) => cb(err, _.sample(list)));
   }
 
@@ -171,13 +180,16 @@ export default class Registry {
     if (_.isNil(this.activeServiceMonitors[name])) {
       throw new Error(`No active service monitor for ${name}`);
     }
-
-    return _.values(this.monitoredServices[name]);
+    const results = _.values(this.monitoredServices[name]);
+    this.logger.debug('Monitor contents for',
+                      { name, results });
+    return results;
   }
 
   monitorStop(name) {
     const m = this.activeServiceMonitors[name];
     if (!_.isNil(m)) {
+      this.logger.debug('Stoppping monitoring', { name });
       m.stop();
       delete this.activeServiceMonitors[name];
     }
@@ -196,12 +208,17 @@ export default class Registry {
     };
     this.monitoredServices[name] = {};
 
+    this.logger.debug('Starting service monitor', { name });
+
     const pullFullList = () => this.list(name, (err, results, rawResult) => {
       // Already got stopped before we got started.
       if (shouldCancel) {
         return;
       }
-      this.monitoredServices[name] = _.groupBy(results, 'url');
+      this.logger.debug('Retrieved service list for monitor',
+                        { name, results });
+
+      this.monitoredServices[name] = _.mapValues(_.groupBy(results, 'url'), (i) => i[0]);
 
       let startIndex;
       if (rawResult.error && rawResult.error.index) {
@@ -209,6 +226,7 @@ export default class Registry {
       } else {
         assert(1 !== 0);
       }
+      this.logger.debug('Starting monitor for service', { name });
       const w = this.store.watcher(this.prefixKey(name),
                                    startIndex,
                                    { recursive: true });
@@ -217,18 +235,25 @@ export default class Registry {
       w.on('change', (record) => {
         if (record.action === 'set') {
           const c = safeJSONParse(record.node.value);
+          assert(_.isObject(c));
           if (!_.isNil(c.url)) {
             this.monitoredServices[name][c.url] = c;
           }
+          this.logger.debug('Monitor set event', { name, c });
         } else if (record.action === 'delete' || record.action === 'expire') {
           const c = safeJSONParse(record.prevNode.value);
+          assert(_.isObject(c));
+          assert(!_.isNil(c.url));
           if (!_.isNil(c.url)) {
+            this.logger.debug('Monitor delete or expire event', { url: c.url, name });
             delete this.monitoredServices[name][c.url];
           }
         } else if (record.action === 'reconnect') {
+          this.logger.debug('Monitor reconnect event');
           w.stop();
           pullFullList();
         } else if (record.action === 'resync') {
+          this.logger.debug('Monitor resync event');
           w.stop();
           pullFullList();
         }
@@ -291,6 +316,7 @@ export default class Registry {
       if (i > -1) {
         this.services.splice(next, 1);
       }
+      this.logger.debug('Removing key', { key: next.key });
       this.store.del(next.key, {
         maxRetries: this.maxRetries,
       },
@@ -307,6 +333,7 @@ export default class Registry {
     }
 
     const list = _.filter(this.services, (e) => e.name === name);
+    this.logger.debug('Unregistering services', { list });
     this.leaveList(list, cb || noop);
   }
 
