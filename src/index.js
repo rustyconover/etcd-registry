@@ -219,14 +219,16 @@ export default class Registry {
                         { name, results });
 
       this.monitoredServices[name] = _.mapValues(_.groupBy(results, 'url'), (i) => i[0]);
-
       let startIndex;
       if (rawResult.error && rawResult.error.index) {
         startIndex = rawResult.error.index;
+      } else if (rawResult.node) {
+        startIndex = rawResult.node.modifiedIndex;
       } else {
         assert(1 !== 0);
       }
-      this.logger.debug('Starting monitor for service', { name });
+      assert(!_.isNil(startIndex));
+      this.logger.debug('Starting monitor for service', { name, startIndex });
       const w = this.store.watcher(this.prefixKey(name),
                                    startIndex,
                                    { recursive: true });
