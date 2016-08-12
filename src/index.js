@@ -165,6 +165,7 @@ export default class Registry {
       entry.timeout = setTimeout(loop, (ttl / 2) * 1000);
       cb(undefined, service);
     });
+    return key;
   }
 
   lookup(name, cb) {
@@ -336,6 +337,17 @@ export default class Registry {
 
     const list = _.filter(this.services, (e) => e.name === name);
     this.logger.debug('Unregistering services', { list });
+    this.leaveList(list, cb || noop);
+  }
+
+  leaveKey(key, cb) {
+    if (typeof name === 'function') {
+      this.destroy(name);
+      return;
+    }
+
+    const list = _.filter(this.services, (e) => e.key === key);
+    this.logger.debug('Unregistering services with key', { key });
     this.leaveList(list, cb || noop);
   }
 
