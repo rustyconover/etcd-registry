@@ -216,14 +216,20 @@ export default class Registry {
       if (shouldCancel) {
         return;
       }
+
+      if (err && !rawResult) {
+        this.logger.debug('Error getting list of service entries', { err });
+        return;
+      }
+
       this.logger.debug('Retrieved service list for monitor',
                         { name, results });
 
       this.monitoredServices[name] = _.mapValues(_.groupBy(results, 'url'), (i) => i[0]);
       let startIndex;
-      if (rawResult.error && rawResult.error.index) {
+      if (rawResult && rawResult.error && rawResult.error.index) {
         startIndex = rawResult.error.index;
-      } else if (rawResult.node) {
+      } else if (rawResult && rawResult.node) {
         startIndex = rawResult.node.modifiedIndex;
       } else {
         assert(1 !== 0);
