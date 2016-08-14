@@ -178,8 +178,9 @@ export default class Registry {
   }
 
   monitorContents(name) {
+    assert(!_.isNil(name));
     if (_.isNil(this.activeServiceMonitors[name])) {
-      throw new Error(`No active service monitor for ${name}`);
+      return [];
     }
     const results = _.values(this.monitoredServices[name]);
     this.logger.debug('Monitor contents for',
@@ -188,6 +189,7 @@ export default class Registry {
   }
 
   monitorStop(name) {
+    assert(!_.isNil(name));
     const m = this.activeServiceMonitors[name];
     if (!_.isNil(m)) {
       this.logger.debug('Stoppping monitoring', { name });
@@ -196,8 +198,14 @@ export default class Registry {
     }
   }
 
-  monitorStart(name) {
-    if (this.activeServiceMonitors[name]) {
+  monitorStart(name, callback) {
+    if (_.isNil(callback)) {
+      callback = () => {};
+    }
+    assert(!_.isNil(name));
+    assert(_.isFunction(callback));
+    if (!_.isNil(this.activeServiceMonitors[name])) {
+      callback();
       return;
     }
     // Fake this.
@@ -214,11 +222,13 @@ export default class Registry {
     const pullFullList = () => this.list(name, (err, results, rawResult) => {
       // Already got stopped before we got started.
       if (shouldCancel) {
+        callback();
         return;
       }
 
       if (err && !rawResult) {
         this.logger.debug('Error getting list of service entries', { err });
+        callback(`Error obtaining list of monitored services ${err}`);
         return;
       }
 
@@ -230,7 +240,11 @@ export default class Registry {
       if (rawResult && rawResult.error && rawResult.error.index) {
         startIndex = rawResult.error.index;
       } else if (rawResult && rawResult.node) {
-        startIndex = rawResult.node.modifiedIndex;
+        if (rawResult.node.nodes) {
+          startIndex = _.max(_.map(rawResult.node.nodes, 'modifiedIndex')) + 1;
+        } else {
+          startIndex = rawResult.node.modifiedIndex + 1;
+        }
       } else {
         assert(1 !== 0);
       }
@@ -240,6 +254,7 @@ export default class Registry {
                                    startIndex,
                                    { recursive: true });
       this.activeServiceMonitors[name] = w;
+
 
       w.on('change', (record) => {
         if (record.action === 'set') {
@@ -267,6 +282,7 @@ export default class Registry {
           pullFullList();
         }
       });
+      callback();
     });
 
     pullFullList();
