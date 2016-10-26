@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-/* eslint no-console:[0] */
-/* eslint no-param-reassign:[0] */
-import Registry from './index.js';
 import optimist from 'optimist';
 import path from 'path';
 import chalk from 'chalk';
@@ -9,6 +6,12 @@ import freeport from 'freeport';
 import tree from 'pretty-tree';
 import net from 'net';
 import address from 'network-address';
+import Registry from './index';
+
+/* eslint no-console:[0] */
+/* eslint no-param-reassign:[0] */
+/* eslint prefer-spread:[0] */
+/* eslint import/no-dynamic-require:[0] */
 
 const argv = optimist
         .usage('Usage: $0 [command] [options]')
@@ -89,7 +92,7 @@ cmds.join = (name, main) => {
 
           const pexit = process.exit;
 
-          process.exit = (code) =>
+          process.exit = code =>
             services.leave(() => {
               pexit(code);
             });

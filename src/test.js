@@ -1,11 +1,13 @@
+// @flow
 /* eslint-env node, mocha */
 /* eslint no-unused-expressions:[0] */
-import Registry from './index.js';
 import { expect } from 'chai';
 import randomstring from 'randomstring';
 import _ from 'lodash';
 import address from 'network-address';
 import async from 'async';
+import Registry from './index';
+
 require('source-map-support').install();
 
 const etcdConnectionString = '127.0.0.1:2379';
@@ -13,7 +15,11 @@ const etcdConnectionString = '127.0.0.1:2379';
 const serviceNamePrefix = randomstring.generate();
 let counter = 1;
 
-const generateServiceName = () => `${serviceNamePrefix}-${counter++}`;
+const generateServiceName = (): string => {
+  const r = `${serviceNamePrefix}-${counter}`;
+  counter += 1;
+  return r;
+};
 
 describe('basic operations', () => {
   _.map([etcdConnectionString,
@@ -26,7 +32,7 @@ describe('basic operations', () => {
          { url: etcdConnectionString },
         ],
         (connection) => {
-          it(`should able be able to use ${connection}`, (done) => {
+          it(`should able be able to use ${JSON.stringify(connection)}`, (done) => {
             const s = new Registry(connection);
             s.leave(done);
           });
@@ -230,7 +236,9 @@ describe('basic operations', () => {
     reg.join(
       {
         name: serviceName,
-        service: 1000,
+        service: {
+          port: 1000,
+        },
       },
       (err) => {
         expect(err, 'join error').to.not.be.ok;
@@ -287,7 +295,9 @@ describe('basic operations', () => {
         setTimeout(() => {
           reg.list(serviceName, (listErr, list) => {
             expect(listErr, 'error on list').to.not.be.ok;
-            expect(list.length, 'number of services').to.equal(2);
+            if (list != null) {
+              expect(list.length, 'number of services').to.equal(2);
+            }
             reg.leave(done);
           });
         }, 100);
@@ -300,7 +310,9 @@ describe('basic operations', () => {
     const serviceName = generateServiceName();
     reg.list(serviceName, (listErr, list) => {
       expect(listErr, 'error on list').to.not.be.ok;
-      expect(list.length, 'number of services').to.equal(0);
+      if (list != null) {
+        expect(list.length, 'number of services').to.equal(0);
+      }
       reg.leave(done);
     });
   });
@@ -379,7 +391,7 @@ describe('basic operations', () => {
     const serviceName = generateServiceName();
     reg.monitorStart(serviceName);
 
-    const instances = _.map(_.range(20), (i) => i + 2000);
+    const instances = _.map(_.range(20), i => i + 2000);
 
     async.each(instances,
                (i, cb) => reg.join({
@@ -409,7 +421,7 @@ describe('basic operations', () => {
   it('should be able to monitor existing multiple service instances', (done) => {
     const reg = new Registry(etcdConnectionString);
     const serviceName = generateServiceName();
-    const instances = _.map(_.range(20), (i) => i + 2000);
+    const instances = _.map(_.range(20), i => i + 2000);
 
     async.each(instances,
                (i, cb) => reg.join({

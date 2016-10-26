@@ -1,0 +1,9 @@
+[ignore]
+.*/node_modules/flow-coverage-report/.*
+.*/lib/.*
+
+[include]
+
+[libs]
+
+[options]
