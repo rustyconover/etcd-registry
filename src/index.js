@@ -4,6 +4,10 @@ import address from 'network-address';
 import Etcd from 'node-etcd';
 import _ from 'lodash';
 import assert from 'assert';
+/* eslint no-duplicate-imports:[0] */
+import type { EtcdClient } from 'node-etcd';
+import type { EventEmitter } from 'events';
+
 
 require('source-map-support').install();
 /* eslint no-param-reassign:[0] */
@@ -33,7 +37,7 @@ type ParsedServiceParameters = {
   port?: number,
   protocol?: string,
   host: string,
-  url: string
+  url: string,
 };
 
 type Logger = {
@@ -46,7 +50,11 @@ type ListCallback = (error: ?any,
 type LookupCallback = (error: ?any, entry: ?ParsedServiceParameters) => void;
 type EmptyCallback = () => void;
 
-const safeJSONParse = (c: string): ?ParsedServiceParameters => {
+const safeJSONParse = (c: ?string): ?ParsedServiceParameters => {
+  if (c == null) {
+    return null;
+  }
+
   let r;
   try {
     r = JSON.parse(c);
@@ -58,13 +66,25 @@ const safeJSONParse = (c: string): ?ParsedServiceParameters => {
 
 const normalizeKey = (key: string) => key.replace(/[^a-zA-Z0-9\-]/g, '-');
 
-const parseConnectionString = (url: string): {
+type FullEtcdOptions = {
   namespace?: string,
   protocol?: string,
   maxRetries?: number,
   logger?: Logger,
-  hosts?: Array<string>
-} => {
+  url?: string,
+  hosts?: Array<string>,
+  auth?: {
+    user: string,
+    pass: string,
+  },
+  ca?: Buffer | string,
+  cert?: Buffer | string,
+  key?: Buffer | string,
+  timeout?: number,
+  passphrase?: string,
+};
+
+const parseConnectionString = (url: string): FullEtcdOptions => {
   const opts = {};
 
   const hosts = url;
@@ -95,7 +115,7 @@ const parseConnectionString = (url: string): {
 };
 
 export default class Registry {
-  store: Etcd;
+  store: EtcdClient;
   destroyed: boolean;
   services: Array<ServiceEntry>;
   logger: Logger;
@@ -112,16 +132,19 @@ export default class Registry {
   };
   ns: string;
 
-  constructor(opts: string | {
-    hosts?: Array<string>,
-    logger?: Logger,
-    maxRetries?: number,
-    protocol?: string,
-    namespace?: string,
-  }) {
+  constructor(opts: string | FullEtcdOptions) {
     if (typeof opts === 'string') {
       opts = parseConnectionString(opts);
     }
+
+    if (opts.hosts == null && opts.url != null) {
+      opts.hosts = [opts.url];
+    }
+
+    if (opts.hosts == null) {
+      throw new Error('No hosts found for Etcd');
+    }
+
     this.store = new Etcd(opts.hosts, opts);
     this.destroyed = false;
     this.services = [];
@@ -321,7 +344,7 @@ export default class Registry {
       }
       assert(!_.isNil(startIndex));
       this.logger.debug('Starting monitor for service', { name, startIndex });
-      const w = this.store.watcher(this.prefixKey(name),
+      const w: EventEmitter = this.store.watcher(this.prefixKey(name),
                                    startIndex,
                                    { recursive: true });
       this.activeServiceMonitors[name] = w;
@@ -389,9 +412,17 @@ export default class Registry {
           return;
         }
 
-        cb(undefined,
-           _.filter(_.map(result.node.nodes, ({ value }) => safeJSONParse(value))),
-           result);
+        const goodNodes = [];
+        _.each(result.node.nodes,
+               ({ value }) => {
+                 const r = safeJSONParse(value);
+
+                 if (r != null) {
+                   goodNodes.push(r);
+                 }
+               });
+
+        cb(undefined, goodNodes, result);
       });
   }
 
