@@ -42,7 +42,7 @@
     "eslint": "latest",
     "eslint-config-airbnb": "latest",
     "eslint-plugin-flowtype": "^2.21.0",
-    "eslint-plugin-import": "^2.0.1",
+    "eslint-plugin-import": "^2.1.0",
     "eslint-plugin-jsx-a11y": "latest",
     "eslint-plugin-react": "latest",
     "flow-bin": "^0.33.0",
