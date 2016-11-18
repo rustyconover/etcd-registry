@@ -22,15 +22,16 @@ const generateServiceName = (): string => {
 };
 
 describe('basic operations', () => {
-  _.map([etcdConnectionString,
-         `http://${etcdConnectionString}`,
-         `http://${etcdConnectionString}?refresh=30`,
-         `http://${etcdConnectionString}?refresh=true`,
-         `http://${etcdConnectionString}?refresh=false`,
-         `http://${etcdConnectionString}?refresh=abc`,
-         'https://discovery.etcd.io/foobar',
-         { url: etcdConnectionString },
-        ],
+  _.map([
+    etcdConnectionString,
+    `http://${etcdConnectionString}`,
+    `http://${etcdConnectionString}?refresh=30`,
+    `http://${etcdConnectionString}?refresh=true`,
+    `http://${etcdConnectionString}?refresh=false`,
+    `http://${etcdConnectionString}?refresh=abc`,
+    'https://discovery.etcd.io/foobar',
+    { url: etcdConnectionString },
+  ],
         (connection) => {
           it(`should able be able to use ${JSON.stringify(connection)}`, (done) => {
             const s = new Registry(connection);
@@ -39,9 +40,10 @@ describe('basic operations', () => {
         });
 
   it('should be able to handle etcd that is down', (done) => {
-    const reg = new Registry({ url: 'http://127.0.0.1:1',
-                               maxRetries: 0,
-                             });
+    const reg = new Registry({
+      url: 'http://127.0.0.1:1',
+      maxRetries: 0,
+    });
     const serviceName = generateServiceName();
     reg.join(
       {
@@ -359,6 +361,30 @@ describe('basic operations', () => {
     });
   });
 
+  it('should be able to monitor a single service instance periodically', (done) => {
+    const reg = new Registry(etcdConnectionString);
+    const serviceName = generateServiceName();
+    reg.periodicMonitorStart(serviceName, 1000);
+    reg.join({ name: serviceName, service: { port: 1000 } }, (err) => {
+      setTimeout(() => {
+        expect(reg.monitorContents(serviceName).length).to.equal(1);
+        expect(err).to.not.be.ok;
+        reg.leave(serviceName, (leaveErr) => {
+          expect(leaveErr).to.not.be.ok;
+          setTimeout(() => {
+            expect(reg.monitorContents(serviceName).length).to.equal(0);
+            reg.lookup(serviceName, (lookupErr, s) => {
+              expect(reg.monitorContents(serviceName).length).to.equal(0);
+              expect(lookupErr).to.not.be.ok;
+              expect(s).to.be.undefined;
+              reg.leave(done);
+            });
+          }, 2000);
+        });
+      }, 2000);
+    });
+  });
+
   it('should be able to monitor a single service instance over renewals', (done) => {
     const reg = new Registry(etcdConnectionString);
     const serviceName = generateServiceName();
@@ -385,6 +411,31 @@ describe('basic operations', () => {
     });
   });
 
+  it('should be able to monitor a single service instance periodically over renewals', (done) => {
+    const reg = new Registry(etcdConnectionString);
+    const serviceName = generateServiceName();
+    reg.periodicMonitorStart(serviceName, 1000);
+    reg.join({ name: serviceName, service: { port: 1000 }, ttl: 1 }, (err) => {
+      setTimeout(() => {
+        expect(reg.monitorContents(serviceName).length).to.equal(1);
+        expect(err).to.not.be.ok;
+        reg.leave(serviceName, (leaveErr) => {
+          expect(leaveErr).to.not.be.ok;
+          setTimeout(() => {
+            expect(reg.monitorContents(serviceName).length).to.equal(0);
+            setTimeout(() => {
+              reg.lookup(serviceName, (lookupErr, s) => {
+                reg.monitorStop(serviceName);
+                expect(lookupErr).to.not.be.ok;
+                expect(s).to.be.undefined;
+                reg.leave(done);
+              });
+            }, 2500);
+          }, 2500);
+        });
+      }, 3000);
+    });
+  });
 
   it('should be able to monitor a multiple service instances', (done) => {
     const reg = new Registry(etcdConnectionString);

@@ -8,10 +8,10 @@ import assert from 'assert';
 import type { EtcdClient } from 'node-etcd';
 import type { EventEmitter } from 'events';
 
-
 require('source-map-support').install();
 /* eslint no-param-reassign:[0] */
 /* eslint arrow-parens:[0] */
+/* eslint no-useless-escape:[0] */
 
 const sha1 = (val: string) => crypto.createHash('sha1').update(val).digest('hex');
 
@@ -28,7 +28,7 @@ type ServiceParameters = {
   port?: number,
   protocol?: string,
   host?: string,
-  url?: string
+  url?: string,
 };
 
 type ParsedServiceParameters = {
@@ -41,12 +41,12 @@ type ParsedServiceParameters = {
 };
 
 type Logger = {
-    debug: (message: ?string, data?: { [name: string]: any }) => void,
+  debug: (message: ?string, data?: { [name: string]: any }) => void,
 };
 
 type ListCallback = (error: ?any,
-                            result: ?Array<ParsedServiceParameters>,
-                            fullError: ?any) => void;
+                     result: ?Array<ParsedServiceParameters>,
+                     rawResult: ?any) => void;
 type LookupCallback = (error: ?any, entry: ?ParsedServiceParameters) => void;
 type EmptyCallback = () => void;
 
@@ -114,7 +114,7 @@ const parseConnectionString = (url: string): FullEtcdOptions => {
   return opts;
 };
 
-export default class Registry {
+export default class ServiceRegistry {
   store: EtcdClient;
   destroyed: boolean;
   services: Array<ServiceEntry>;
@@ -130,6 +130,10 @@ export default class Registry {
       stop: () => void
     }
   };
+  periodicServiceMonitors: {
+    [name: string]: number
+  };
+
   ns: string;
 
   constructor(opts: string | FullEtcdOptions) {
@@ -159,6 +163,7 @@ export default class Registry {
 
     this.monitoredServices = {};
     this.activeServiceMonitors = {};
+    this.periodicServiceMonitors = {};
     this.ns = (opts.namespace || '').replace(/^\//, '').replace(/([^\/])$/, '$1/');
 
     if (!this.logger) {
@@ -168,7 +173,7 @@ export default class Registry {
     }
   }
 
-  prefixKey(key: string) {
+  prefixKey(key: string): string {
     return `services/${this.ns}${key}`;
   }
 
@@ -208,17 +213,20 @@ export default class Registry {
     const key = this.prefixKey(`${normalizeKey(name)}/${sha1(nameAndUrl)}`);
 
     const value = JSON.stringify(service);
-    const entry: ServiceEntry = { name,
-                                  key,
-                                  destroyed: false,
-                                  timeout: null,
-                                };
+    const entry: ServiceEntry = {
+      name,
+      key,
+      destroyed: false,
+      timeout: null,
+    };
 
-    const update = (callback) => this.store.set(key,
-                                                value,
-                                                { ttl,
-                                                  maxRetries: this.maxRetries,
-                                                }, callback);
+    const update = (callback) => this.store.set(
+      key,
+      value,
+      {
+        ttl,
+        maxRetries: this.maxRetries,
+      }, callback);
     const loop = () => update((err) => {
       if (entry.destroyed) {
         return;
@@ -284,7 +292,7 @@ export default class Registry {
     assert(!_.isNil(name));
     const m = this.activeServiceMonitors[name];
     if (!_.isNil(m)) {
-      this.logger.debug('Stoppping monitoring', { name });
+      this.logger.debug('Stopping monitoring', { name });
       m.stop();
       delete this.activeServiceMonitors[name];
     }
@@ -330,7 +338,7 @@ export default class Registry {
                         { name, results });
 
       this.monitoredServices[name] = _.mapValues(_.groupBy(results, 'url'), (i) => i[0]);
-      let startIndex;
+      let startIndex: number;
       if (rawResult && rawResult.error && rawResult.error.index) {
         startIndex = rawResult.error.index;
       } else if (rawResult && rawResult.node) {
@@ -377,6 +385,64 @@ export default class Registry {
         callback();
       }
     });
+
+    pullFullList();
+  }
+
+  periodicMonitorStart(name: string, interval: number, callback: ?(error: ?any) => void): void {
+    assert(!_.isNil(interval) && interval > 0);
+    assert(!_.isNil(name));
+    if (!_.isNil(this.periodicServiceMonitors[name])) {
+      if (callback) {
+        callback();
+      }
+      return;
+    }
+    // Fake this.
+    let shouldCancel = false;
+    let timerId;
+
+    this.logger.debug('Starting periodic service monitor', { name });
+
+    const pullFullList = () => this.list(name, (err, results, rawResult) => {
+      // Already got stopped before we got started.
+      if (shouldCancel) {
+        if (callback) {
+          callback();
+        }
+        return;
+      }
+
+      if (err && !rawResult) {
+        this.logger.debug('Error getting list of service entries for periodic monitoring', { err });
+        if (callback) {
+          callback(`Error obtaining list of monitored services for periodic monitoring ${err}`);
+        }
+        timerId = setTimeout(pullFullList, interval);
+        return;
+      }
+
+      this.logger.debug('Retrieved service list for monitor',
+                        { name, results });
+
+      this.monitoredServices[name] = _.mapValues(_.groupBy(results, 'url'), (i) => i[0]);
+
+      if (callback) {
+        callback();
+      }
+      timerId = setTimeout(pullFullList, interval);
+    });
+
+    this.activeServiceMonitors[name] = {
+      stop: () => {
+        shouldCancel = true;
+        if (timerId != null) {
+          clearTimeout(timerId);
+          timerId = null;
+        }
+      },
+    };
+    this.monitoredServices[name] = {};
 
     pullFullList();
   }

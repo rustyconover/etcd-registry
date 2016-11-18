@@ -1,13 +1,15 @@
 {
   "name": "@rustyconover/etcd-registry",
-  "version": "2.1.12",
+  "version": "2.1.15",
   "description": "Service registry for Node.js on top of etcd",
   "repository": "git://github.com/rustyconover/etcd-registry.git",
   "main": "./lib/index.js",
+  "license" : "MIT",
   "scripts": {
-    "build": "flow && make",
+    "build": "make",
     "clean": "rm -rf lib",
     "prepublish": "npm run build",
+    "flow-check": "flow check",
     "flow-coverage": "flow-coverage-report -i 'src/**/*.js' -t html -t text",
     "test": "npm run build && mocha -t 20000 -b lib/test.js"
   },
@@ -16,9 +18,10 @@
   },
   "dependencies": {
     "async": "^2.1.2",
-    "babel-eslint": "^7.0.0",
+    "babel-eslint": "^7.1.0",
     "chai": "^3.5.0",
     "chalk": "^1.0.0",
+    "eslint-plugin-flowtype": "^2.25.0",
     "flow-coverage-report": "^0.1.0",
     "freeport": "^1.0.2",
     "lodash": "^4.16.4",
@@ -27,7 +30,7 @@
     "optimist": "^0.6.1",
     "pretty-tree": "^1.0.0",
     "randomstring": "^1.1.5",
-    "source-map-support": "^0.4.5"
+    "source-map-support": "^0.4.6"
   },
   "devDependencies": {
     "babel-cli": "^6.18.0",
@@ -41,7 +44,7 @@
     "babel-preset-node6": "^11.0.0",
     "eslint": "latest",
     "eslint-config-airbnb": "latest",
-    "eslint-plugin-flowtype": "^2.21.0",
+    "eslint-plugin-flowtype": "^2.25.0",
     "eslint-plugin-import": "^2.0.1",
     "eslint-plugin-jsx-a11y": "latest",
     "eslint-plugin-react": "latest",
