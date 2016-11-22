@@ -17,7 +17,7 @@
     "etcd-registry": "./lib/bin.js"
   },
   "dependencies": {
-    "async": "^2.1.2",
+    "async": "^2.1.4",
     "babel-eslint": "^7.1.0",
     "chai": "^3.5.0",
     "chalk": "^1.0.0",
