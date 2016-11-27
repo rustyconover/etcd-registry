@@ -21,7 +21,7 @@
     "babel-eslint": "^7.1.0",
     "chai": "^3.5.0",
     "chalk": "^1.0.0",
-    "eslint-plugin-flowtype": "^2.25.0",
+    "eslint-plugin-flowtype": "^2.28.2",
     "flow-coverage-report": "^0.1.0",
     "freeport": "^1.0.2",
     "lodash": "^4.16.4",
