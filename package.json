@@ -48,7 +48,7 @@
     "eslint-plugin-import": "^2.0.1",
     "eslint-plugin-jsx-a11y": "latest",
     "eslint-plugin-react": "latest",
-    "flow-bin": "^0.33.0",
+    "flow-bin": "^0.34.0",
     "istanbul": "^0.4.5",
     "mocha": "^3.1.2"
   }
