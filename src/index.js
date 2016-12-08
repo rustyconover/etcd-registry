@@ -29,6 +29,7 @@ type ServiceParameters = {
   protocol?: string,
   host?: string,
   url?: string,
+  version?: number,
 };
 
 type ParsedServiceParameters = {
@@ -38,6 +39,7 @@ type ParsedServiceParameters = {
   protocol?: string,
   host: string,
   url: string,
+  version: number,
 };
 
 type Logger = {
@@ -179,10 +181,12 @@ export default class ServiceRegistry {
 
   join({ name,
          service,
+         version,
          ttl = 15,
        }: {
          name: string,
          service?: ServiceParameters,
+         version?: number,
          ttl?: number
        }, cb: ?EmptyCallback): string {
     assert(!_.isNil(name), 'Name should be defined');
@@ -198,6 +202,7 @@ export default class ServiceRegistry {
 
     service.name = name;
     service.hostname = service.hostname || address();
+    service.version = version || 0;
 
     if (!service.host) {
       if (service.port != null) {

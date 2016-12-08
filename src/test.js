@@ -90,6 +90,7 @@ describe('basic operations', () => {
               hostname: '127.0.0.1',
               host: '127.0.0.1:1000',
               url: 'http://127.0.0.1:1000',
+              version: 0,
             });
             reg.leave(() => done());
           });
@@ -123,6 +124,7 @@ describe('basic operations', () => {
               hostname: '127.0.0.1',
               host: '127.0.0.1:1000',
               url: 'http://127.0.0.1:1000',
+              version: 0,
             });
             reg.leave(() => done());
           });
@@ -154,6 +156,7 @@ describe('basic operations', () => {
           hostname: '127.0.0.1',
           host: '127.0.0.1:1000',
           url: 'http://127.0.0.1:1000',
+          version: 0,
         });
         reg.leave(() => done());
       });
@@ -185,6 +188,7 @@ describe('basic operations', () => {
               hostname: '127.0.0.1',
               host: '127.0.0.1:1000',
               url: 'http://127.0.0.1:1000',
+              version: 0,
             });
 
             setTimeout(() => {
@@ -225,6 +229,7 @@ describe('basic operations', () => {
               hostname: '127.0.0.1',
               host: '127.0.0.1:1000',
               url: 'http://127.0.0.1:1000',
+              version: 0,
             });
             reg.leave(() => done());
           });
@@ -254,6 +259,7 @@ describe('basic operations', () => {
               hostname: address(),
               host: `${address()}:1000`,
               url: `http://${address()}:1000`,
+              version: 0,
             });
             reg.leave(() => done());
           });
@@ -279,6 +285,7 @@ describe('basic operations', () => {
               hostname: address(),
               host: `${address()}`,
               url: `http://${address()}`,
+              version: 0,
             });
             reg.leave(() => done());
           });
@@ -298,6 +305,29 @@ describe('basic operations', () => {
           reg.list(serviceName, (listErr, list) => {
             expect(listErr, 'error on list').to.not.be.ok;
             if (list != null) {
+              expect(list.length, 'number of services').to.equal(2);
+            }
+            reg.leave(done);
+          });
+        }, 100);
+      });
+    });
+  });
+
+  it('should be able to join and list services with a version', (done) => {
+    const reg = new Registry(etcdConnectionString);
+    const serviceName = generateServiceName();
+    reg.join({ name: serviceName, service: { port: 1000 }, version: 13 }, (err) => {
+      expect(err, 'error on join').to.not.be.ok;
+      reg.join({ name: serviceName, service: { port: 1001 }, version: 14 }, (secondErr) => {
+        expect(secondErr, 'second error on join').to.not.be.ok;
+        setTimeout(() => {
+          reg.list(serviceName, (listErr, list) => {
+            expect(listErr, 'error on list').to.not.be.ok;
+            if (list != null) {
+              expect(list.length, 'number of services').to.equal(2);
+              expect(_.filter(list, l => l.version === 13).length, 'number of services with version 13').to.equal(1);
+              expect(_.filter(list, l => l.version === 14).length, 'number of services with version 14').to.equal(1);
               expect(list.length, 'number of services').to.equal(2);
             }
             reg.leave(done);
