@@ -552,7 +552,6 @@ export default class ServiceRegistry {
     this.leaveList(this.services, () => {
       if (cb) {
         cb();
-        return;
       }
     });
   }
