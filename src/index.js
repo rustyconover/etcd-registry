@@ -122,6 +122,11 @@ export default class ServiceRegistry {
   services: Array<ServiceEntry>;
   logger: Logger;
   maxRetries: number;
+  changeCounter: number;
+  monitoredChangeId: {
+    [key: string]: number
+  }
+
   monitoredServices: {
     [key: string]: {
       [url: string]: ParsedServiceParameters
@@ -166,6 +171,9 @@ export default class ServiceRegistry {
     this.monitoredServices = {};
     this.activeServiceMonitors = {};
     this.periodicServiceMonitors = {};
+    this.changeCounter = 1;
+    this.monitoredChangeId = {};
+
     this.ns = (opts.namespace || '').replace(/^\//, '').replace(/([^\/])$/, '$1/');
 
     if (!this.logger) {
@@ -293,6 +301,11 @@ export default class ServiceRegistry {
     return results;
   }
 
+  monitorContentsChangeId(name: string): ?number {
+    assert(!_.isNil(name));
+    return this.monitoredChangeId[name];
+  }
+
   monitorStop(name: string): void {
     assert(!_.isNil(name));
     const m = this.activeServiceMonitors[name];
@@ -323,6 +336,9 @@ export default class ServiceRegistry {
     this.logger.debug('Starting service monitor', { name });
 
     const pullFullList = () => this.list(name, (err, results, rawResult) => {
+      this.monitoredChangeId[name] = this.changeCounter;
+      this.changeCounter += 1;
+
       // Already got stopped before we got started.
       if (shouldCancel) {
         if (callback) {
@@ -364,6 +380,9 @@ export default class ServiceRegistry {
 
 
       w.on('change', (record) => {
+        this.monitoredChangeId[name] = this.changeCounter;
+        this.changeCounter += 1;
+
         if (record.action === 'set') {
           const c = safeJSONParse(record.node.value);
           if (c != null) {
@@ -430,10 +449,19 @@ export default class ServiceRegistry {
       this.logger.debug('Retrieved service list for monitor',
                         { name, results });
 
-      this.monitoredServices[name] = _.mapValues(_.groupBy(results, 'url'), (i) => i[0]);
+      // To determine if there was a change
+      const newValue = _.mapValues(_.groupBy(results, 'url'), (i) => i[0]);
+      const newUrls = _.keys(newValue).sort();
+      const oldUrls = _.keys(this.monitoredServices[name] || {}).sort();
 
-      if (callback) {
-        callback();
+      if (!_.isEqual(newUrls, oldUrls)) {
+        this.monitoredServices[name] = newValue;
+        this.monitoredChangeId[name] = this.changeCounter;
+        this.changeCounter += 1;
+
+        if (callback) {
+          callback();
+        }
       }
       timerId = setTimeout(pullFullList, interval);
     });

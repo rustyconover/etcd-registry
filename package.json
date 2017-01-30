@@ -1,6 +1,6 @@
 {
   "name": "@rustyconover/etcd-registry",
-  "version": "2.1.17",
+  "version": "2.1.19",
   "description": "Service registry for Node.js on top of etcd",
   "repository": "git://github.com/rustyconover/etcd-registry.git",
   "main": "./lib/index.js",
