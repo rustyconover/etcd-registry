@@ -22,7 +22,7 @@
     "chai": "^3.5.0",
     "chalk": "^1.0.0",
     "eslint-plugin-flowtype": "^2.25.0",
-    "flow-coverage-report": "^0.2.0",
+    "flow-coverage-report": "^0.3.0",
     "freeport": "^1.0.2",
     "lodash": "^4.16.4",
     "network-address": "^1.1.0",
