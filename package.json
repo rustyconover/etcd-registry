@@ -19,7 +19,7 @@
   "dependencies": {
     "async": "^2.1.2",
     "babel-eslint": "^7.1.0",
-    "chai": "^3.5.0",
+    "chai": "^4.0.1",
     "chalk": "^1.0.0",
     "eslint-plugin-flowtype": "^2.25.0",
     "flow-coverage-report": "^0.3.0",
